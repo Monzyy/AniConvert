@@ -19,8 +19,9 @@ Yet another batch file converter for [HandBrake](https://handbrake.fr/)
 
 ## Usage notes
 
-If HandBrakeCLI is not in your PATH, you may place it in the same directory as
+- If HandBrakeCLI is not in your PATH, you may place it in the same directory as
 the script, or specify the path manually.
+- Install python requirements with `pip install -r requirements.txt`
 
 ## Example usage
 

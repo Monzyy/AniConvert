@@ -20,6 +20,8 @@ import re
 import subprocess
 import sys
 
+import iso639
+
 ###############################################################
 # Configuration values, no corresponding command-line args
 ###############################################################
@@ -217,7 +219,7 @@ class HandBrakeAudioInfo(object):
 
 
 class HandBrakeSubtitleInfo(object):
-    pattern = re.compile(r"(\d+), (.+) \(iso639-2: ([a-z]{3})\) \((\S+)\)\((\S+)\)")
+    pattern = re.compile(r"(\d+), (.+) \[(.+)\]")
 
     def __init__(self, info_str):
         match = self.pattern.match(info_str)
@@ -225,9 +227,12 @@ class HandBrakeSubtitleInfo(object):
             raise ValueError("Unknown subtitle track info format: " + repr(info_str))
         self.index = int(match.group(1))
         self.language = match.group(2)
-        self.language_code = match.group(3)
-        self.format = match.group(4)
-        self.source = match.group(5)
+        try:
+            self.language_code = iso639.find(native=self.language)['iso639_2_b']
+        except:
+            self.language_code = None
+        self.format = match.group(3)
+        self.source = None
         self.title = None
 
     def __str__(self):
