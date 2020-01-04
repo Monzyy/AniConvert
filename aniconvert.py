@@ -49,21 +49,12 @@ DEFAULT_OUTPUT_SUFFIX = "-converted"
 # Obviously, do not define anything that would cause HandBrake
 # to not convert the video file either.
 HANDBRAKE_ARGS = """
--E ffaac
--B 160
--6 dpl2
+-E copy
 -R Auto
--e x264
--q 20.0
+-e x265
 --vfr
---audio-copy-mask aac,ac3,dtshd,dts,mp3
---audio-fallback ffaac
 --loose-anamorphic
 --modulus 2
---x264-preset medium
---h264-profile high
---h264-level 3.1
---subtitle-burned
 """
 
 ###############################################################
@@ -78,7 +69,7 @@ INPUT_VIDEO_FORMATS = ["mkv", "mp4"]
 # The format to convert the videos to. Only "mp4", "mkv", and
 # "m4v" are accepted, because those are the only formats that
 # HandBrake can write. On the command line, specify as "-j mp4"
-OUTPUT_VIDEO_FORMAT = "mp4"
+OUTPUT_VIDEO_FORMAT = "mkv"
 
 # A list of preferred audio languages, ordered from most
 # to least preferable. If there is only one audio track in the
@@ -93,11 +84,11 @@ OUTPUT_VIDEO_FORMAT = "mp4"
 # "-a eng,none" will use English audio if it is available, or
 # remove the audio track otherwise. On the command line,
 # specify as "-a jpn,eng"
-AUDIO_LANGUAGES = ["jpn", "eng"]
+AUDIO_LANGUAGES = ["dan", "eng", "jpn"]
 
 # This is the same as the preferred audio languages, but
 # for subtitles. On the command line, specify as "-s eng"
-SUBTITLE_LANGUAGES = ["eng"]
+SUBTITLE_LANGUAGES = ["dan", "eng"]
 
 # What to do when the destination file already exists. Can be
 # one of:
