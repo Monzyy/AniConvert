@@ -17,6 +17,7 @@ import errno
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -330,6 +331,16 @@ def try_delete_file(path):
     except OSError as e:
         if e.errno != errno.ENOENT:
             raise
+
+
+def copy_non_video_files(input_dir, output_dir):
+    for file_name in os.listdir(input_dir):
+        file_path = os.path.join(input_dir, file_name)
+        if os.path.isdir(file_path):
+            continue
+        if os.path.splitext(file_path)[1][1:] in INPUT_VIDEO_FORMATS:
+            continue
+        shutil.copy(file_path, output_dir)
 
 
 def run_handbrake_scan(handbrake_path, input_path):
@@ -785,6 +796,7 @@ def generate_batches(args):
 def execute_batch(args, batch):
     output_dir = get_output_dir(args.output_dir, args.input_dir, batch.dir_path)
     try_create_directory(output_dir)
+    copy_non_video_files(batch.dir_path, output_dir)
     for file_name, track_info in batch.track_map.items():
         output_file_name = replace_extension(file_name, args.output_format)
         input_path = os.path.join(batch.dir_path, file_name)
