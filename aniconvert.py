@@ -52,7 +52,6 @@ DEFAULT_OUTPUT_SUFFIX = "-converted"
 HANDBRAKE_ARGS = """
 -E copy
 -R Auto
--e x265
 --vfr
 --loose-anamorphic
 --modulus 2
@@ -71,6 +70,12 @@ INPUT_VIDEO_FORMATS = ["mkv", "mp4"]
 # "m4v" are accepted, because those are the only formats that
 # HandBrake can write. On the command line, specify as "-j mp4"
 OUTPUT_VIDEO_FORMAT = "mkv"
+
+# The video encoder. The available encoders might depend on you
+# version of HandBrake. Some of the available encoders are:
+# x264, x264_10bit, x265, x265_10bit, x265_12bit, mpeg4, mpeg2,
+# VP8, VP9, theora
+ENCODER = "x265"
 
 # A list of preferred audio languages, ordered from most
 # to least preferable. If there is only one audio track in the
@@ -650,8 +655,9 @@ def run_handbrake(arg_list):
 
 
 def get_handbrake_args(handbrake_path, input_path, output_path,
-        audio_track, subtitle_track, video_dimensions):
+        audio_track, subtitle_track, video_dimensions, encoder):
     args = HANDBRAKE_ARGS.replace("\n", " ").strip().split()
+    args += ["-e", encoder]
     args += ["-i", input_path]
     args += ["-o", output_path]
     if audio_track:
@@ -804,7 +810,8 @@ def execute_batch(args, batch):
         simp_input_path = get_simplified_path(args.input_dir, input_path)
         handbrake_args = get_handbrake_args(args.handbrake_path,
             input_path, output_path, track_info.audio_track,
-            track_info.subtitle_track, args.output_dimensions)
+            track_info.subtitle_track, args.output_dimensions,
+            args.encoder)
         logging.info("Converting '%s'", simp_input_path)
         try:
             run_handbrake(handbrake_args)
@@ -943,6 +950,7 @@ def parse_args():
         type=parse_language_list, default=AUDIO_LANGUAGES)
     parser.add_argument("-s", "--subtitle-languages",
         type=parse_language_list, default=SUBTITLE_LANGUAGES)
+    parser.add_argument("-e", "--encoder", default=ENCODER)
     return parser.parse_args()
 
 
