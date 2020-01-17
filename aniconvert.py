@@ -130,6 +130,14 @@ MANUAL_UND = False
 # specify as "-r"
 RECURSIVE_SEARCH = False
 
+# Set this to true to rename files and directory names if
+# their name contain the encoding. If you encode from h.264
+# to hevc/h.265 the file will be renamed from:
+# The.Mandalorian.S01E01.1080p.DDP5.1.x264-DBRETAiL.mkv
+# to:
+# The.Mandalorian.S01E01.1080p.DDP5.1.x265-DBRETAiL.mkv
+RENAME_ENCODING = True
+
 ###############################################################
 # End of configuration values, code begins here
 ###############################################################
@@ -298,10 +306,12 @@ def get_files_in_dir(path, extensions, recursive):
             del subdir_names[:]
 
 
-def get_output_dir(base_output_dir, base_input_dir, dir_path):
+def get_output_dir(base_output_dir, base_input_dir, dir_path, rename, encoder):
     relative_path = os.path.relpath(dir_path, base_input_dir)
     if relative_path == ".":
         return base_output_dir
+    if rename:
+        relative_path = rename_encoding(relative_path, encoder)
     return os.path.join(base_output_dir, relative_path)
 
 
@@ -338,14 +348,17 @@ def try_delete_file(path):
             raise
 
 
-def copy_non_video_files(input_dir, output_dir):
+def copy_non_video_files(input_dir, output_dir, rename, encoder):
     for file_name in os.listdir(input_dir):
+        output_path = output_dir
         file_path = os.path.join(input_dir, file_name)
         if os.path.isdir(file_path):
             continue
         if os.path.splitext(file_path)[1][1:] in INPUT_VIDEO_FORMATS:
             continue
-        shutil.copy(file_path, output_dir)
+        if rename:
+            output_path = os.path.join(output_dir, rename_encoding(os.path.basename(file_path), encoder))
+        shutil.copy(file_path, output_path)
 
 
 def run_handbrake_scan(handbrake_path, input_path):
@@ -728,8 +741,8 @@ def check_output_path(args, output_path):
         return True
 
 
-def filter_convertible_files(args, dir_path, file_names):
-    output_dir = get_output_dir(args.output_dir, args.input_dir, dir_path)
+def filter_convertible_files(args, dir_path, file_names, rename, encoder):
+    output_dir = get_output_dir(args.output_dir, args.input_dir, dir_path, rename, encoder)
     try:
         try_create_directory(output_dir)
     except OSError as e:
@@ -738,6 +751,8 @@ def filter_convertible_files(args, dir_path, file_names):
     convertible_files = []
     for file_name in file_names:
         output_file_name = replace_extension(file_name, args.output_format)
+        if rename:
+            output_file_name = rename_encoding(output_file_name, encoder)
         output_path = os.path.join(output_dir, output_file_name)
         if not check_output_path(args, output_path):
             continue
@@ -771,10 +786,10 @@ def get_track_map(args, dir_path, file_names):
     return track_map
 
 
-def generate_batch(args, dir_path, file_names):
+def generate_batch(args, dir_path, file_names, rename, encoder):
     simp_dir_path = get_simplified_path(args.input_dir, dir_path)
     logging.info("Scanning videos in '%s'", simp_dir_path)
-    convertible_files = filter_convertible_files(args, dir_path, file_names)
+    convertible_files = filter_convertible_files(args, dir_path, file_names, rename, encoder)
     track_map = get_track_map(args, dir_path, convertible_files)
     if len(track_map) == 0:
         logging.warning("No videos in '%s' can be converted", simp_dir_path)
@@ -788,7 +803,7 @@ def generate_batches(args):
     found = False
     for dir_path, file_names in dir_list:
         found = True
-        batch = generate_batch(args, dir_path, file_names)
+        batch = generate_batch(args, dir_path, file_names, args.rename_encoding, args.encoder)
         if batch:
             batch_list.append(batch)
     if not found:
@@ -800,11 +815,13 @@ def generate_batches(args):
 
 
 def execute_batch(args, batch):
-    output_dir = get_output_dir(args.output_dir, args.input_dir, batch.dir_path)
+    output_dir = get_output_dir(args.output_dir, args.input_dir, batch.dir_path, args.rename_encoding, args.encoder)
     try_create_directory(output_dir)
-    copy_non_video_files(batch.dir_path, output_dir)
+    copy_non_video_files(batch.dir_path, output_dir, args.rename_encoding, args.encoder)
     for file_name, track_info in batch.track_map.items():
         output_file_name = replace_extension(file_name, args.output_format)
+        if args.rename_encoding:
+            output_file_name = rename_encoding(file_name, args.encoder)
         input_path = os.path.join(batch.dir_path, file_name)
         output_path = os.path.join(output_dir, output_file_name)
         simp_input_path = get_simplified_path(args.input_dir, input_path)
@@ -824,10 +841,27 @@ def execute_batch(args, batch):
             raise
 
 
+def rename_encoding(name, encoding):
+    path = ""
+    if os.path.isdir(name) or os.path.isfile(name):
+        path, name = os.path.split(name)
+    replacements = {}
+    if '265' in encoding:
+        replacements = {"h.264": "hevc", "H.264": "HEVC", "x264": "x265", "X264": "X265"}
+    elif '264' in encoding:
+        replacements = {'hevc': 'h.264', 'HEVC': 'H.264', 'x265': 'x264', 'X265': 'X264'}
+    for k, v in replacements.items():
+        name = name.replace(k, v)
+    return os.path.join(path, name)
+
+
 def sanitize_and_validate_args(args):
     args.input_dir = os.path.abspath(args.input_dir)
     if not args.output_dir:
-        args.output_dir = args.input_dir + DEFAULT_OUTPUT_SUFFIX
+        if args.rename_encoding:
+            args.output_dir = rename_encoding(args.input_dir, args.encoder)
+        if args.output_dir == args.input_dir:
+            args.output_dir = args.input_dir + DEFAULT_OUTPUT_SUFFIX
     args.output_dir = os.path.abspath(args.output_dir)
     if not os.path.exists(args.input_dir):
         logging.error("Input directory does not exist: '%s'", args.input_dir)
@@ -950,7 +984,9 @@ def parse_args():
         type=parse_language_list, default=AUDIO_LANGUAGES)
     parser.add_argument("-s", "--subtitle-languages",
         type=parse_language_list, default=SUBTITLE_LANGUAGES)
-    parser.add_argument("-e", "--encoder", default=ENCODER)
+    parser.add_argument("-e", "--encoder", default=ENCODER),
+    parser.add_argument("-b", "--rename-encoding",
+        action="store_true", default=RENAME_ENCODING)
     return parser.parse_args()
 
 
