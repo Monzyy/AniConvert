@@ -821,7 +821,7 @@ def execute_batch(args, batch):
     for file_name, track_info in batch.track_map.items():
         output_file_name = replace_extension(file_name, args.output_format)
         if args.rename_encoding:
-            output_file_name = rename_encoding(file_name, args.encoder)
+            output_file_name = rename_encoding(output_file_name, args.encoder)
         input_path = os.path.join(batch.dir_path, file_name)
         output_path = os.path.join(output_dir, output_file_name)
         simp_input_path = get_simplified_path(args.input_dir, input_path)
