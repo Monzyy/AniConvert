@@ -846,10 +846,12 @@ def rename_encoding(name, encoding):
     if os.path.isdir(name) or os.path.isfile(name):
         path, name = os.path.split(name)
     replacements = {}
-    if '265' in encoding:
-        replacements = {"h.264": "hevc", "H.264": "HEVC", "x264": "x265", "X264": "X265"}
-    elif '264' in encoding:
-        replacements = {'hevc': 'h.264', 'HEVC': 'H.264', 'x265': 'x264', 'X265': 'X264'}
+    if "265" in encoding:
+        replacements = {"h.264": "hevc", "H.264": "HEVC", "x264": "x265",
+                        "X264": "X265", "H264": "HEVC", "h264": "hevc"}
+    elif "264" in encoding:
+        replacements = {"hevc": "h.264", "HEVC": "H.264", "x265": "x264",
+                        "X265": "X264", "H265": "H.264", "h265": "h.264"}
     for k, v in replacements.items():
         name = name.replace(k, v)
     return os.path.join(path, name)
