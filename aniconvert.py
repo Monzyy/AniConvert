@@ -864,7 +864,11 @@ def sanitize_and_validate_args(args):
             args.output_dir = rename_encoding(args.input_dir, args.encoder)
         if args.output_dir == args.input_dir:
             args.output_dir = args.input_dir + DEFAULT_OUTPUT_SUFFIX
-    args.output_dir = os.path.abspath(args.output_dir)
+    elif args.output_dir and args.recursive_search and args.rename_encoding:
+        args.output_dir = os.path.join(os.path.abspath(args.output_dir),
+                                       os.path.basename(rename_encoding(args.input_dir, args.encoder)))
+    else:
+        args.output_dir = os.path.abspath(args.output_dir)
     if not os.path.exists(args.input_dir):
         logging.error("Input directory does not exist: '%s'", args.input_dir)
         return False
